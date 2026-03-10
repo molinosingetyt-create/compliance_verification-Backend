@@ -1,0 +1,12 @@
+__pycache__
+.env
+venv/
+.venv/
+.vscode/
+migrations
+seeds/.seeded_marker
+src/public
+docker-compose.yml
+.keys/
+keys/
+file/
