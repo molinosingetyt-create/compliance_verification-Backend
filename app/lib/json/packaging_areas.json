@@ -1,0 +1,22 @@
+[
+    {
+        "name": "PASTA",
+        "alias": "pasta",
+        "url": null
+    },
+    {
+        "name": "CARRUSEL",
+        "alias": "carrusel",
+        "url": null
+    },
+    {
+        "name": "EMPAQUE HARINA DE TRIGO - OP",
+        "alias": "empaque_harina_de_trigo_op",
+        "url": null
+    },
+    {
+        "name": "EMPAQUE HARINA DE MAIZ - PAQUITAS",
+        "alias": "empaque_harina_de_maiz_paquitas",
+        "url": null
+    }
+]

@@ -1,0 +1,56 @@
+[
+    {
+        "name": "90",
+        "alias": "90g",
+        "tolerance": "4.5",
+        "url": null
+    },
+    {
+        "name": "125",
+        "alias": "125g",
+        "tolerance": "5.625",
+        "url": null
+    },
+    {
+        "name": "200",
+        "alias": "200g",
+        "tolerance": "9",
+        "url": null
+    },
+    {
+        "name": "250",
+        "alias": "250g",
+        "tolerance": "9",
+        "url": null
+    },
+    {
+        "name": "500",
+        "alias": "500g",
+        "tolerance": "15",
+        "url": null
+    },
+    {
+        "name": "1000",
+        "alias": "1000g",
+        "tolerance": "15",
+        "url": null
+    },
+    {
+        "name": "12500",
+        "alias": "12500g",
+        "tolerance": "150",
+        "url": null
+    },
+    {
+        "name": "25000",
+        "alias": "25000g",
+        "tolerance": "250",
+        "url": null
+    },
+    {
+        "name": "50000",
+        "alias": "50000g",
+        "tolerance": "500",
+        "url": null
+    }
+]

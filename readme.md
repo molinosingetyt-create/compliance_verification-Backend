@@ -43,3 +43,7 @@ CREATE DATABASE molinos OWNER developer;
 # Salir de la consola de postgresql
 
 \q
+
+# los archivos para dar formato se ejecuta
+
+black .

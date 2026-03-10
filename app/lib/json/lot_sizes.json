@@ -1,0 +1,52 @@
+[
+  {
+    "name": "20 ó menos",
+    "sample_size": "Inspeccion total",
+    "allowed_with_error": "0"
+  },
+  {
+    "name": "40",
+    "sample_size": "32",
+    "allowed_with_error": "1"
+  },
+  {
+    "name": "60",
+    "sample_size": "35",
+    "allowed_with_error": "1"
+  },
+  {
+    "name": "80",
+    "sample_size": "47",
+    "allowed_with_error": "2"
+  },
+  {
+    "name": "100",
+    "sample_size": "49",
+    "allowed_with_error": "2"
+  },
+  {
+    "name": "200",
+    "sample_size": "64",
+    "allowed_with_error": "3"
+  },
+  {
+    "name": "300",
+    "sample_size": "67",
+    "allowed_with_error": "3"
+  },
+  {
+    "name": "400",
+    "sample_size": "81",
+    "allowed_with_error": "4"
+  },
+  {
+    "name": "500",
+    "sample_size": "81",
+    "allowed_with_error": "4"
+  },
+  {
+    "name": "600 a 100000",
+    "sample_size": "98",
+    "allowed_with_error": "5"
+  }
+]

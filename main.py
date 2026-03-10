@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 import logging
 from app.lib.config.middleware import configure_cors
+from app.lib.config.database import SessionLocal
 from app.routers import (
     product_router,
     brand_router,
@@ -14,6 +15,17 @@ from app.routers import (
 )
 from app.lib.config.database import engine
 from app.models import Base
+from app.models.seeders_executed import run_seeder
+
+from seeders.parameter_seeders import (
+    seed_brands,
+    seed_grammages,
+    seed_lot_sizes,
+    seed_packaging_areas,
+    seed_packaging_machines,
+    seed_products,
+    seed_units_packed_hour,
+)
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +33,19 @@ logger = logging.getLogger(__name__)
 
 # Crea las tablas
 Base.metadata.create_all(bind=engine)
+
+
+def run_all_seeders():
+    db = SessionLocal()
+    run_seeder(db, "seed_brands", seed_brands)
+    run_seeder(db, "seed_grammages", seed_grammages)
+    run_seeder(db, "seed_lot_sizes", seed_lot_sizes)
+    run_seeder(db, "seed_packaging_areas", seed_packaging_areas)
+    run_seeder(db, "seed_packaging_machines", seed_packaging_machines)
+    run_seeder(db, "seed_products", seed_products)
+    run_seeder(db, "seed_units_packed_hour", seed_units_packed_hour)
+    db.close()
+
 
 app = FastAPI(
     title="Compliance Verification API",
@@ -46,3 +71,6 @@ app.include_router(packaging_machine_router.router, prefix="/v1/packaging_machin
 app.include_router(grammage_router.router, prefix="/v1/grammage")
 app.include_router(units_packed_hour_router.router, prefix="/v1/units_packed_hour")
 app.include_router(lot_size_router.router, prefix="/v1/lot_sizes")
+
+# Ejecutar seeders al arrancar la aplicación
+run_all_seeders()

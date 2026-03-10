@@ -1,0 +1,122 @@
+[
+    {
+        "name": "EMP PL 1",
+        "alias": "emp_pl_1",
+        "url": null,
+        "packaging_area": "PASTA"
+    },
+    {
+        "name": "EMP PL 2",
+        "alias": "emp_pl_2",
+        "url": null,
+        "packaging_area": "PASTA"
+    },
+    {
+        "name": "EMP PL 3",
+        "alias": "emp_pl_3",
+        "url": null,
+        "packaging_area": "PASTA"
+    },
+    {
+        "name": "EMP PL 4",
+        "alias": "emp_pl_4",
+        "url": null,
+        "packaging_area": "PASTA"
+    },
+    {
+        "name": "EMP PC 1",
+        "alias": "emp_pc_1",
+        "url": null,
+        "packaging_area": "PASTA"
+    },
+    {
+        "name": "EMP PC 2",
+        "alias": "emp_pc_2",
+        "url": null,
+        "packaging_area": "PASTA"
+    },
+    {
+        "name": "EMP PC 3",
+        "alias": "emp_pc_3",
+        "url": null,
+        "packaging_area": "PASTA"
+    },
+    {
+        "name": "EMP PC 4",
+        "alias": "emp_pc_4",
+        "url": null,
+        "packaging_area": "PASTA"
+    },
+    {
+        "name": "EMP PC 5",
+        "alias": "emp_pc_5",
+        "url": null,
+        "packaging_area": "PASTA"
+    },
+    {
+        "name": "CARRUSEL",
+        "alias": "carrusel",
+        "url": null,
+        "packaging_area": "CARRUSEL"
+    },
+    {
+        "name": "Y",
+        "alias": "y",
+        "url": null,
+        "packaging_area": "EMPAQUE HARINA DE TRIGO - OP"
+    },
+    {
+        "name": "X",
+        "alias": "x",
+        "url": null,
+        "packaging_area": "EMPAQUE HARINA DE TRIGO - OP"
+    },
+    {
+        "name": "Z",
+        "alias": "z",
+        "url": null,
+        "packaging_area": "EMPAQUE HARINA DE TRIGO - OP"
+    },
+    {
+        "name": "S",
+        "alias": "s",
+        "url": null,
+        "packaging_area": "EMPAQUE HARINA DE TRIGO - OP"
+    },
+    {
+        "name": "P",
+        "alias": "p",
+        "url": null,
+        "packaging_area": "EMPAQUE HARINA DE MAIZ - PAQUITAS"
+    },
+    {
+        "name": "Q",
+        "alias": "q",
+        "url": null,
+        "packaging_area": "EMPAQUE HARINA DE MAIZ - PAQUITAS"
+    },
+    {
+        "name": "T",
+        "alias": "t",
+        "url": null,
+        "packaging_area": "EMPAQUE HARINA DE MAIZ - PAQUITAS"
+    },
+    {
+        "name": "U",
+        "alias": "u",
+        "url": null,
+        "packaging_area": "EMPAQUE HARINA DE MAIZ - PAQUITAS"
+    },
+    {
+        "name": "V",
+        "alias": "v",
+        "url": null,
+        "packaging_area": "EMPAQUE HARINA DE MAIZ - PAQUITAS"
+    },
+    {
+        "name": "W",
+        "alias": "w",
+        "url": null,
+        "packaging_area": "EMPAQUE HARINA DE MAIZ - PAQUITAS"
+    }
+]

@@ -1,0 +1,372 @@
+[
+    {
+        "packaging_machine": "Y",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "Y",
+        "grammage": "1000",
+        "value": "2100"
+    },
+    {
+        "packaging_machine": "X",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "X",
+        "grammage": "1000",
+        "value": "2100"
+    },
+    {
+        "packaging_machine": "Z",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "Z",
+        "grammage": "1000",
+        "value": "2100"
+    },
+    {
+        "packaging_machine": "S",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "S",
+        "grammage": "1000",
+        "value": "2100"
+    },
+    {
+        "packaging_machine": "P",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "P",
+        "grammage": "1000",
+        "value": "2100"
+    },
+    {
+        "packaging_machine": "Q",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "Q",
+        "grammage": "1000",
+        "value": "2100"
+    },
+    {
+        "packaging_machine": "T",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "T",
+        "grammage": "1000",
+        "value": "2100"
+    },
+    {
+        "packaging_machine": "U",
+        "grammage": "1000",
+        "value": "2100"
+    },
+    {
+        "packaging_machine": "V",
+        "grammage": "1000",
+        "value": "2100"
+    },
+    {
+        "packaging_machine": "W",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "W",
+        "grammage": "1000",
+        "value": "2700"
+    },
+    {
+        "packaging_machine": "EMP PL 1",
+        "grammage": "90",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 1",
+        "grammage": "125",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 1",
+        "grammage": "200",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 1",
+        "grammage": "250",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 1",
+        "grammage": "500",
+        "value": "3600"
+    },
+    {
+        "packaging_machine": "EMP PL 1",
+        "grammage": "1000",
+        "value": "2400"
+    },
+    {
+        "packaging_machine": "EMP PL 2",
+        "grammage": "90",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 2",
+        "grammage": "125",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 2",
+        "grammage": "200",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 2",
+        "grammage": "250",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 2",
+        "grammage": "500",
+        "value": "3600"
+    },
+    {
+        "packaging_machine": "EMP PL 2",
+        "grammage": "1000",
+        "value": "2400"
+    },
+    {
+        "packaging_machine": "EMP PL 3",
+        "grammage": "90",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 3",
+        "grammage": "125",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 3",
+        "grammage": "200",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 3",
+        "grammage": "250",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 3",
+        "grammage": "500",
+        "value": "3600"
+    },
+    {
+        "packaging_machine": "EMP PL 3",
+        "grammage": "1000",
+        "value": "2400"
+    },
+    {
+        "packaging_machine": "EMP PL 4",
+        "grammage": "90",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 4",
+        "grammage": "125",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 4",
+        "grammage": "200",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 4",
+        "grammage": "250",
+        "value": "4200"
+    },
+    {
+        "packaging_machine": "EMP PL 4",
+        "grammage": "500",
+        "value": "3600"
+    },
+    {
+        "packaging_machine": "EMP PL 4",
+        "grammage": "1000",
+        "value": "2400"
+    },
+    {
+        "packaging_machine": "EMP PC 1",
+        "grammage": "90",
+        "value": "6000"
+    },
+    {
+        "packaging_machine": "EMP PC 1",
+        "grammage": "125",
+        "value": "6000"
+    },
+    {
+        "packaging_machine": "EMP PC 1",
+        "grammage": "200",
+        "value": "5400"
+    },
+    {
+        "packaging_machine": "EMP PC 1",
+        "grammage": "250",
+        "value": "5400"
+    },
+    {
+        "packaging_machine": "EMP PC 1",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "EMP PC 1",
+        "grammage": "1000",
+        "value": "2400"
+    },
+    {
+        "packaging_machine": "EMP PC 2",
+        "grammage": "90",
+        "value": "6000"
+    },
+    {
+        "packaging_machine": "EMP PC 2",
+        "grammage": "125",
+        "value": "6000"
+    },
+    {
+        "packaging_machine": "EMP PC 2",
+        "grammage": "200",
+        "value": "5400"
+    },
+    {
+        "packaging_machine": "EMP PC 2",
+        "grammage": "250",
+        "value": "5400"
+    },
+    {
+        "packaging_machine": "EMP PC 2",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "EMP PC 2",
+        "grammage": "1000",
+        "value": "2400"
+    },
+    {
+        "packaging_machine": "EMP PC 3",
+        "grammage": "90",
+        "value": "6000"
+    },
+    {
+        "packaging_machine": "EMP PC 3",
+        "grammage": "125",
+        "value": "6000"
+    },
+    {
+        "packaging_machine": "EMP PC 3",
+        "grammage": "200",
+        "value": "5400"
+    },
+    {
+        "packaging_machine": "EMP PC 3",
+        "grammage": "250",
+        "value": "5400"
+    },
+    {
+        "packaging_machine": "EMP PC 3",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "EMP PC 3",
+        "grammage": "1000",
+        "value": "2400"
+    },
+    {
+        "packaging_machine": "EMP PC 4",
+        "grammage": "90",
+        "value": "6000"
+    },
+    {
+        "packaging_machine": "EMP PC 4",
+        "grammage": "125",
+        "value": "6000"
+    },
+    {
+        "packaging_machine": "EMP PC 4",
+        "grammage": "200",
+        "value": "5400"
+    },
+    {
+        "packaging_machine": "EMP PC 4",
+        "grammage": "250",
+        "value": "5400"
+    },
+    {
+        "packaging_machine": "EMP PC 4",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "EMP PC 4",
+        "grammage": "1000",
+        "value": "2400"
+    },
+    {
+        "packaging_machine": "EMP PC 5",
+        "grammage": "90",
+        "value": "6000"
+    },
+    {
+        "packaging_machine": "EMP PC 5",
+        "grammage": "125",
+        "value": "6000"
+    },
+    {
+        "packaging_machine": "EMP PC 5",
+        "grammage": "200",
+        "value": "5400"
+    },
+    {
+        "packaging_machine": "EMP PC 5",
+        "grammage": "250",
+        "value": "5400"
+    },
+    {
+        "packaging_machine": "EMP PC 5",
+        "grammage": "500",
+        "value": "3000"
+    },
+    {
+        "packaging_machine": "EMP PC 5",
+        "grammage": "1000",
+        "value": "2400"
+    },
+    {
+        "packaging_machine": "CARRUSEL",
+        "grammage": "25000",
+        "value": "600"
+    },
+    {
+        "packaging_machine": "CARRUSEL",
+        "grammage": "50000",
+        "value": "600"
+    }
+]
