@@ -5,6 +5,7 @@ from app.models.parameters.units_packed_hour import UnitsPackedHour
 from app.models.parameters.grammage import Grammage
 from app.models.parameters.lot_size import LotSize
 from app.lib.config.database import SessionLocal
+import logging
 
 
 class ComplianceVerificationController:
