@@ -2,10 +2,8 @@ from pydantic import BaseModel
 
 
 class CreateItemComplianceVerificationForm(BaseModel):
-    nominal_quantity: str
     sample_weight_agm: str
     average_weight: str
-    actual_quantity: str
 
 
 class CreateComplianceVerificationForm(BaseModel):

@@ -3,7 +3,7 @@ Esquemas de respuesta para documentación en Swagger/OpenAPI
 """
 
 from pydantic import BaseModel, ConfigDict
-from typing import Optional, List, Any
+from typing import Dict, Optional, List, Any
 
 
 class ErrorResponse(BaseModel):
@@ -385,6 +385,61 @@ class LotSizeListResponse(BaseModel):
                     },
                 ],
                 "message": "Tamaños de lote obtenidos exitosamente",
+            }
+        }
+    )
+
+
+class ItemComplianceVerificationResponse(BaseModel):
+    """Modelo de respuesta para los items de la verificación"""
+
+    id: int
+    compliance_verification_id: int
+    nominal_quantity: str
+    sample_weight_agm: str
+    average_weight: str
+    actual_quantity: str
+    status: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ComplianceVerificationResponse(BaseModel):
+    """Modelo de respuesta para una verificación de cumplimiento"""
+
+    id: int
+    sampled: str
+    product_id: Optional[int]
+    brand_id: Optional[int]
+    grammage_id: Optional[int]
+    analyzed: str
+    machine_id: Optional[int]
+    lot_expires: str
+    status: int
+    items: List[ItemComplianceVerificationResponse]
+
+    model_config = ConfigDict(from_attributes=True)
+    
+class FinalResponse(BaseModel):
+    message: str
+    result: int
+    errors_found: Dict[str, int] # Especifica que es {'T1': int, 'T2': int}
+    allowed_t1: int
+    data: ComplianceVerificationResponse
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "message": "Verificación procesada",
+                "result": 1,
+                "errors_found": {"T1": 0, "T2": 0},
+                "allowed_t1": 2,
+                "data": {
+                    "id": 1,
+                    "sampled": "ANDERSON PICO",
+                    "items": [] # ... etc
+                }
             }
         }
     )

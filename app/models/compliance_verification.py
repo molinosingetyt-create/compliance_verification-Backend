@@ -12,8 +12,8 @@ class ComplianceVerification(Base):
     product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
     brand_id = Column(Integer, ForeignKey("brands.id"), nullable=True)
     grammage_id = Column(Integer, ForeignKey("grammages.id"), nullable=True)
-    analyzed = Column(String(150), unique=True, index=True)
-    machine_id = Column(Integer, ForeignKey("machines.id"), nullable=True)
+    analyzed = Column(String(150))
+    machine_id = Column(Integer, ForeignKey("packaging_machines.id"), nullable=True)
     lot_expires = Column(String(150))
     status = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.datetime.now)
@@ -24,7 +24,7 @@ class ComplianceVerification(Base):
     product = relationship("Product", backref="compliance_verifications")
     brand = relationship("Brand", backref="compliance_verifications")
     grammage = relationship("Grammage", backref="compliance_verifications")
-    machine = relationship("Machine", backref="compliance_verifications")
+    machine = relationship("PackagingMachine", backref="compliance_verifications")
 
     def __repr__(self):
         return "<ComplianceVerification.id %r>" % self.id

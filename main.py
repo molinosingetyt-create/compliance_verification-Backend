@@ -12,6 +12,7 @@ from app.routers import (
     grammage_router,
     units_packed_hour_router,
     lot_size_router,
+    compliance_verification_router,
 )
 from app.lib.config.database import engine
 from app.models import Base
@@ -71,6 +72,9 @@ app.include_router(packaging_machine_router.router, prefix="/v1/packaging_machin
 app.include_router(grammage_router.router, prefix="/v1/grammage")
 app.include_router(units_packed_hour_router.router, prefix="/v1/units_packed_hour")
 app.include_router(lot_size_router.router, prefix="/v1/lot_sizes")
+app.include_router(
+    compliance_verification_router.router, prefix="/v1/compliance_verifications"
+)
 
 # Ejecutar seeders al arrancar la aplicación
 run_all_seeders()
