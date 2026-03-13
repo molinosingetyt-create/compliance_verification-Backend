@@ -5,6 +5,8 @@ from app.models.parameters.units_packed_hour import UnitsPackedHour
 from app.models.parameters.grammage import Grammage
 from app.models.parameters.lot_size import LotSize
 from app.lib.config.database import SessionLocal
+from sqlalchemy.orm import joinedload
+from fastapi.encoders import jsonable_encoder
 import logging
 
 
@@ -15,12 +17,25 @@ class ComplianceVerificationController:
         db = SessionLocal()
         try:
             # Validación básica de entrada
-            required_fields = ["machine_id", "grammage_id", "items", "product_id", "brand_id", "sampled", "analyzed", "lot_expires"]
+            required_fields = [
+                "machine_id",
+                "grammage_id",
+                "items",
+                "product_id",
+                "brand_id",
+                "sampled",
+                "analyzed",
+                "lot_expires",
+            ]
             for field in required_fields:
                 if not hasattr(data, field):
-                    raise HTTPException(status_code=400, detail=f"Falta el campo requerido: {field}")
+                    raise HTTPException(
+                        status_code=400, detail=f"Falta el campo requerido: {field}"
+                    )
             if not isinstance(data.items, list) or len(data.items) == 0:
-                raise HTTPException(status_code=400, detail="La lista de ítems no puede estar vacía")
+                raise HTTPException(
+                    status_code=400, detail="La lista de ítems no puede estar vacía"
+                )
 
             with SessionLocal() as db:
                 # 1️⃣ Buscar configuración base
@@ -36,7 +51,8 @@ class ComplianceVerificationController:
                 if not units_hour:
                     logging.error("No existe configuración de unidades/hora")
                     raise HTTPException(
-                        status_code=404, detail="No existe configuración de unidades/hora"
+                        status_code=404,
+                        detail="No existe configuración de unidades/hora",
                     )
 
                 grammage_obj = (
@@ -66,10 +82,12 @@ class ComplianceVerificationController:
                 required_sample_size = int(lot_size.sample_size)
                 received_sample_size = len(data.items)
                 if received_sample_size < required_sample_size:
-                    logging.error(f"Muestra insuficiente: {received_sample_size} de {required_sample_size}")
+                    logging.error(
+                        f"Muestra insuficiente: {received_sample_size} de {required_sample_size}"
+                    )
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Muestra insuficiente. Se requieren {required_sample_size} ítems, pero se recibieron {received_sample_size}."
+                        detail=f"Muestra insuficiente. Se requieren {required_sample_size} ítems, pero se recibieron {received_sample_size}.",
                     )
 
                 # 3️⃣ Procesar Items y Contar Errores
@@ -87,7 +105,9 @@ class ComplianceVerificationController:
                         average_weight = float(item.average_weight)
                     except Exception:
                         logging.error("Peso inválido en ítem")
-                        raise HTTPException(status_code=400, detail="Peso inválido en ítem")
+                        raise HTTPException(
+                            status_code=400, detail="Peso inválido en ítem"
+                        )
                     status_item = 1
 
                     # Validación de Errores (Prioridad T2 sobre T1)
@@ -129,19 +149,22 @@ class ComplianceVerificationController:
 
                 db.add(verification)
                 db.commit()
-                db.refresh(verification)
                 for i in items_to_save:
                     i.compliance_verification_id = verification.id
                 db.bulk_save_objects(items_to_save)
                 db.commit()
+                db.refresh(verification)
 
-                return {
-                    "message": "Verificación procesada",
+                response_data = {
+                    "detail": f"¡Verificación procesada exitosamente! Resultado: {'CUMPLE' if final_status == 1 else 'NO CUMPLE'}",
                     "result": final_status,
                     "errors_found": {"T1": count_t1, "T2": count_t2},
                     "allowed_t1": allowed_t1,
                     "data": verification,
                 }
+
+            # Esto convierte el objeto 'verification' en un diccionario simple
+            return jsonable_encoder(response_data)
         except HTTPException as e:
             raise
         except Exception as e:
@@ -180,6 +203,7 @@ class ComplianceVerificationController:
                     return lot
 
         return None
+
     @staticmethod
     def get_sample_size(units_value, db):
         """
@@ -214,3 +238,78 @@ class ComplianceVerificationController:
                 logging.warning(f"Error interpretando nombre de lote: {name}")
                 continue
         return None
+
+    @staticmethod
+    def get_all():
+        db = SessionLocal()
+
+        try:
+
+            verifications = (
+                db.query(ComplianceVerification)
+                .options(
+                    joinedload(ComplianceVerification.product),
+                    joinedload(ComplianceVerification.machine),
+                )
+                .order_by(ComplianceVerification.id.desc())
+                .all()
+            )
+
+            result = []
+
+            for v in verifications:
+
+                result.append(
+                    {
+                        "id": v.id,
+                        "created_at": v.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                        "sampled": v.sampled,
+                        "product_name": v.product.name if v.product else None,
+                        "machine_name": v.machine.name if v.machine else None,
+                        "analyzed": v.analyzed,
+                        "lot_expires": v.lot_expires,
+                        "status": v.status,
+                    }
+                )
+
+            return result
+
+        except Exception as e:
+
+            logging.exception("Error listando verificaciones")
+            raise HTTPException(status_code=500, detail=str(e))
+
+        finally:
+            db.close()
+
+    @staticmethod
+    def get_by_id(id):
+        db = SessionLocal()
+        try:
+            verification = (
+                db.query(ComplianceVerification)
+                .options(
+                    joinedload(ComplianceVerification.item_compliance_verifications),
+                    joinedload(ComplianceVerification.product),
+                    joinedload(ComplianceVerification.brand),
+                    joinedload(ComplianceVerification.grammage),
+                    joinedload(ComplianceVerification.machine),
+                )
+                .filter(ComplianceVerification.id == id)
+                .first()
+            )
+
+            if not verification:
+                raise HTTPException(
+                    status_code=404, detail="Verificación no encontrada"
+                )
+
+            return verification
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logging.exception("Error obteniendo verificación por ID")
+            raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            db.close()

@@ -63,3 +63,31 @@ async def create_compliance_verification(
     """
     controller = ComplianceVerificationController()
     return controller.create(compliance_verification_data)
+
+
+@router.get("/list-all", tags=["compliance_verifications"])
+async def list_compliance_verifications():
+    """
+    **Respuestas:**
+    - **200**: Lista de verificaciones de cumplimiento
+    - **400**: Parámetros de consulta inválidos
+    - **500**: Error al obtener las verificaciones de cumplimiento desde la base de datos
+    """
+    controller = ComplianceVerificationController()
+    return controller.get_all()
+
+
+@router.get("/list/{id}", tags=["compliance_verifications"])
+async def list_compliance_verifications_id(id: int):
+    """
+
+    Query Parameters:
+    - **id** (int): ID de la verificación de cumplimiento a obtener.
+
+        **Respuestas:**
+        - **200**: Verificación de cumplimiento obtenida exitosamente
+        - **400**: Parámetros de consulta inválidos
+        - **500**: Error al obtener las verificaciones de cumplimiento desde la base de datos
+    """
+    controller = ComplianceVerificationController()
+    return controller.get_by_id(id)

@@ -391,11 +391,9 @@ class LotSizeListResponse(BaseModel):
 
 
 class ItemComplianceVerificationResponse(BaseModel):
-    """Modelo de respuesta para los items de la verificación"""
-
     id: int
     compliance_verification_id: int
-    nominal_quantity: str
+    nominal_quantity: str  # Coincide con tu Column(String)
     sample_weight_agm: str
     average_weight: str
     actual_quantity: str
@@ -405,8 +403,6 @@ class ItemComplianceVerificationResponse(BaseModel):
 
 
 class ComplianceVerificationResponse(BaseModel):
-    """Modelo de respuesta para una verificación de cumplimiento"""
-
     id: int
     sampled: str
     product_id: Optional[int]
@@ -416,30 +412,17 @@ class ComplianceVerificationResponse(BaseModel):
     machine_id: Optional[int]
     lot_expires: str
     status: int
-    items: List[ItemComplianceVerificationResponse]
+    # Importante: El nombre debe ser igual al backref en el modelo ItemComplianceVerification
+    item_compliance_verifications: List[ItemComplianceVerificationResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
-    
-class FinalResponse(BaseModel):
-    message: str
-    result: int
-    errors_found: Dict[str, int] # Especifica que es {'T1': int, 'T2': int}
-    allowed_t1: int
-    data: ComplianceVerificationResponse
 
-    model_config = ConfigDict(
-        from_attributes=True,
-        json_schema_extra={
-            "example": {
-                "message": "Verificación procesada",
-                "result": 1,
-                "errors_found": {"T1": 0, "T2": 0},
-                "allowed_t1": 2,
-                "data": {
-                    "id": 1,
-                    "sampled": "ANDERSON PICO",
-                    "items": [] # ... etc
-                }
-            }
-        }
-    )
+
+class FinalResponse(BaseModel):
+    detail: str  # Usamos detail para que Angular lo lea directo en la modal
+    result: int
+    errors_found: Dict[str, int]
+    allowed_t1: int
+    data: Any  # Any evita que el ResponseValidationError truene si hay nulos
+
+    model_config = ConfigDict(from_attributes=True)
