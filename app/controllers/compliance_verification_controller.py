@@ -1,3 +1,5 @@
+import statistics
+
 from fastapi import HTTPException
 from app.models.compliance_verification import ComplianceVerification
 from app.models.item_compliance_verification import ItemComplianceVerification
@@ -62,13 +64,13 @@ class ComplianceVerificationController:
                     logging.error("Gramaje no encontrado")
                     raise HTTPException(status_code=404, detail="Gramaje no encontrado")
 
-                # Extraer valor nominal y tolerancia
+                # Extraer valor nominal y tolerance
                 nominal_value = float("".join(filter(str.isdigit, grammage_obj.name)))
                 try:
                     tolerance = float(grammage_obj.tolerance)
                 except Exception:
-                    logging.error("Error extrayendo tolerancia de gramaje")
-                    raise HTTPException(status_code=400, detail="Tolerancia inválida")
+                    logging.error("Error extrayendo tolerance de gramaje")
+                    raise HTTPException(status_code=400, detail="tolerance inválida")
 
                 # 2️⃣ Buscar tamaño de lote y reglas de error
                 lot_size = ComplianceVerificationController.get_sample_size(
@@ -98,6 +100,7 @@ class ComplianceVerificationController:
                 # Límites de control
                 limit_t1 = nominal_value - tolerance
                 limit_t2 = nominal_value - (tolerance * 2)
+                print(f"Nominal: {nominal_value}, Tolerance: {tolerance}, Limit T1: {limit_t1}, Limit T2: {limit_t2}")
 
                 for item in data.items:
                     try:
@@ -111,11 +114,11 @@ class ComplianceVerificationController:
                     status_item = 1
 
                     # Validación de Errores (Prioridad T2 sobre T1)
-                    if actual_weight < limit_t2:
+                    if average_weight < limit_t2:
                         status_item = 3
                         count_t2 += 1
-                    elif actual_weight < limit_t1:
-                        status_item = 1
+                    elif average_weight < limit_t1:
+                        status_item = 2
                         count_t1 += 1
 
                     items_to_save.append(
@@ -123,8 +126,8 @@ class ComplianceVerificationController:
                             compliance_verification_id=None,
                             nominal_quantity=nominal_value,
                             sample_weight_agm=actual_weight,
-                            average_weight=average_weight,
-                            actual_quantity=actual_weight - average_weight,
+                            average_weight=actual_weight - average_weight,
+                            actual_quantity=average_weight,
                             status=status_item,
                         )
                     )
@@ -242,14 +245,15 @@ class ComplianceVerificationController:
     @staticmethod
     def get_all():
         db = SessionLocal()
-
         try:
-
             verifications = (
                 db.query(ComplianceVerification)
                 .options(
                     joinedload(ComplianceVerification.product),
                     joinedload(ComplianceVerification.machine),
+                    joinedload(ComplianceVerification.grammage),
+                    joinedload(ComplianceVerification.brand),
+                    joinedload(ComplianceVerification.item_compliance_verifications)
                 )
                 .order_by(ComplianceVerification.id.desc())
                 .all()
@@ -258,30 +262,91 @@ class ComplianceVerificationController:
             result = []
 
             for v in verifications:
+                items = v.item_compliance_verifications
+                net_weights = []   # actual_quantity (Contenido neto real)
+                gross_weights = []  # sample_weight_agm (Contenido bruto: neto + bolsa)
+                
+                # Contadores de errores según status del item
+                t1_errors_count = 0
+                t2_errors_count = 0
+                under_nominal_count = 0 # Unidades debajo del peso neto nominal
 
-                result.append(
-                    {
-                        "id": v.id,
-                        "created_at": v.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                        "sampled": v.sampled,
-                        "product_name": v.product.name if v.product else None,
-                        "machine_name": v.machine.name if v.machine else None,
-                        "analyzed": v.analyzed,
-                        "lot_expires": v.lot_expires,
-                        "status": v.status,
-                    }
-                )
+                # Extraer valor nominal del gramaje
+                nominal_value = 0
+                if v.grammage:
+                    digits = "".join(filter(str.isdigit, v.grammage.name))
+                    nominal_value = float(digits) if digits else 0
+
+                for item in items:
+                    try:
+                        # Procesar Pesos
+                        val_net = float(item.actual_quantity) if item.actual_quantity is not None else None
+                        val_gross = float(item.sample_weight_agm) if item.sample_weight_agm is not None else None
+
+                        if val_net is not None:
+                            net_weights.append(val_net)
+                            # Unidades debajo del peso neto nominal
+                            if val_net < nominal_value:
+                                under_nominal_count += 1
+                        
+                        if val_gross is not None:
+                            gross_weights.append(val_gross)
+
+                        # Conteo de errores por ESTADO del item
+                        # 1 = OK, 2 = Error T1, 3 = Error T2
+                        if item.status == 2:
+                            t1_errors_count += 1
+                        elif item.status == 3:
+                            t2_errors_count += 1
+
+                    except (ValueError, TypeError):
+                        continue
+
+                # Cálculos Estadísticos
+                n = len(net_weights)
+                avg_net_weight = sum(net_weights) / n if n > 0 else 0
+                avg_gross_weight = sum(gross_weights) / len(gross_weights) if len(gross_weights) > 0 else 0
+                
+                # Desviación estándar (Neto)
+                std_dev = statistics.stdev(net_weights) if n > 1 else 0
+
+                # Porcentaje de unidades bajo el peso neto
+                percentage_under_nominal = (under_nominal_count / n * 100) if n > 0 else 0
+
+                result.append({
+                    "id": v.id,
+                    "created_at": v.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "sampled": v.sampled,
+                    "product_name": v.product.name if v.product else None,
+                    "machine_name": v.machine.name if v.machine else None,
+                    "grammage_name": v.grammage.name if v.grammage else None,
+                    "brand_name": v.brand.name if v.brand else None,
+                    "tolerance": float(v.grammage.tolerance) if v.grammage and v.grammage.tolerance else 0,
+                    
+                    # --- Métricas Calculadas ---
+                    "nominal_value": nominal_value,
+                    "avg_net_weight": round(avg_net_weight, 2),      # Promedio contenido real
+                    "avg_gross_weight": round(avg_gross_weight, 2),  # Promedio con empaque
+                    "t1_errors_count": t1_errors_count,              # Basado en status 2
+                    "t2_errors_count": t2_errors_count,              # Basado en status 3
+                    "under_nominal_count": under_nominal_count,      # Unidades < peso neto
+                    "percentage_under_nominal": round(percentage_under_nominal, 2),
+                    "standard_deviation": round(std_dev, 4),
+                    # --------------------------
+                    
+                    "analyzed": v.analyzed,
+                    "lot_expires": v.lot_expires,
+                    "status": v.status, # Status final de la verificación (Cumple/No cumple)
+                })
 
             return result
 
         except Exception as e:
-
-            logging.exception("Error listando verificaciones")
+            logging.exception("Error al listar verificaciones con métricas corregidas")
             raise HTTPException(status_code=500, detail=str(e))
-
         finally:
             db.close()
-
+            
     @staticmethod
     def get_by_id(id):
         db = SessionLocal()
