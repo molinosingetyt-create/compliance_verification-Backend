@@ -297,6 +297,7 @@ class ComplianceVerificationController:
                         if item.status == 2:
                             t1_errors_count += 1
                         elif item.status == 3:
+                            t1_errors_count += 1
                             t2_errors_count += 1
 
                     except (ValueError, TypeError):
