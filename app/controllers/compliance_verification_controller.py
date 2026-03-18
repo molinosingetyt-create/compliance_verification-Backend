@@ -16,7 +16,6 @@ class ComplianceVerificationController:
 
     @staticmethod
     def create(data):
-        db = SessionLocal()
         try:
             # Validación básica de entrada
             required_fields = [
@@ -85,11 +84,17 @@ class ComplianceVerificationController:
                 received_sample_size = len(data.items)
                 if received_sample_size < required_sample_size:
                     logging.error(
-                        f"Muestra insuficiente: {received_sample_size} de {required_sample_size}"
+                        "Muestra insuficiente: %s de %s",
+                        received_sample_size,
+                        required_sample_size,
                     )
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Muestra insuficiente. Se requieren {required_sample_size} ítems, pero se recibieron {received_sample_size}.",
+                        detail=(
+                            "Muestra insuficiente. Se requieren "
+                            f"{required_sample_size} ítems, pero se recibieron "
+                            f"{received_sample_size}."
+                        ),
                     )
 
                 # 3️⃣ Procesar Items y Contar Errores
@@ -100,7 +105,6 @@ class ComplianceVerificationController:
                 # Límites de control
                 limit_t1 = nominal_value - tolerance
                 limit_t2 = nominal_value - (tolerance * 2)
-                print(f"Nominal: {nominal_value}, Tolerance: {tolerance}, Limit T1: {limit_t1}, Limit T2: {limit_t2}")
 
                 for item in data.items:
                     try:
@@ -159,7 +163,10 @@ class ComplianceVerificationController:
                 db.refresh(verification)
 
                 response_data = {
-                    "detail": f"¡Verificación procesada exitosamente! Resultado: {'CUMPLE' if final_status == 1 else 'NO CUMPLE'}",
+                    "detail": (
+                        "¡Verificación procesada exitosamente! Resultado: "
+                        f"{'CUMPLE' if final_status == 1 else 'NO CUMPLE'}"
+                    ),
                     "result": final_status,
                     "errors_found": {"T1": count_t1, "T2": count_t2},
                     "allowed_t1": allowed_t1,
@@ -168,44 +175,11 @@ class ComplianceVerificationController:
 
             # Esto convierte el objeto 'verification' en un diccionario simple
             return jsonable_encoder(response_data)
-        except HTTPException as e:
+        except HTTPException:
             raise
         except Exception as e:
             logging.exception("Error inesperado en verificación de cumplimiento")
             raise HTTPException(status_code=500, detail=str(e))
-
-    def get_sample_size(units_value, db):
-
-        lot_sizes = (
-            db.query(LotSize).filter(LotSize.status == 1).order_by(LotSize.id).all()
-        )
-
-        for lot in lot_sizes:
-
-            name = lot.name.lower()
-
-            # 20 o menos
-            if "menos" in name:
-                limit = int(name.split()[0])
-                if units_value <= limit:
-                    return lot
-
-            # rango 600 a 100000
-            elif "a" in name:
-                parts = name.split("a")
-                min_val = int(parts[0].strip())
-                max_val = int(parts[1].strip())
-
-                if min_val <= units_value <= max_val:
-                    return lot
-
-            # valores exactos (40,60,80...)
-            else:
-                limit = int(name)
-                if units_value <= limit:
-                    return lot
-
-        return None
 
     @staticmethod
     def get_sample_size(units_value, db):
