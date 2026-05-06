@@ -55,13 +55,6 @@ class BrandResponse(BaseModel):
             "example": {"id": 1, "name": "Marca XXX", "alias": "MXXX", "status": 1}
         }
     )
-    status: int
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {"id": 1, "name": "Marca XXX", "alias": "MXXX", "status": 1}
-        }
-    )
 
 
 class ProductListResponse(BaseModel):
