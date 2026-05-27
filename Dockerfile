@@ -3,6 +3,7 @@ FROM python:3.12-slim AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
+    TZ=America/Bogota \
     APP_HOME=/app
 
 WORKDIR ${APP_HOME}

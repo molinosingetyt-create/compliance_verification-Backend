@@ -101,6 +101,7 @@ class ComplianceVerificationController:
                 items_to_save = []
                 count_t1 = 0
                 count_t2 = 0
+                net_content_sum = 0.0  # suma de contenido neto por ítem (para promedio global)
 
                 # Límites de control
                 limit_t1 = nominal_value - tolerance
@@ -115,6 +116,7 @@ class ComplianceVerificationController:
                         raise HTTPException(
                             status_code=400, detail="Peso inválido en ítem"
                         )
+                    net_content_sum += average_weight
                     status_item = 1
 
                     # Validación de Errores (Prioridad T2 sobre T1)
@@ -140,6 +142,10 @@ class ComplianceVerificationController:
                 allowed_t1 = int(lot_size.allowed_with_error)
                 final_status = 1
                 if count_t2 > 0 or count_t1 > allowed_t1:
+                    final_status = 2
+                # Tercera condición: el promedio del contenido neto debe ser >= al nominal
+                avg_net_content = net_content_sum / received_sample_size
+                if avg_net_content < nominal_value:
                     final_status = 2
 
                 # 5️⃣ Guardar Verificación Principal

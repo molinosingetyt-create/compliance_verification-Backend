@@ -1,5 +1,5 @@
-import datetime
 from app.models.base import Base
+from app.lib.timezone import now_bogota
 from sqlalchemy import Column, Integer, String, DateTime, inspect
 
 
@@ -12,9 +12,9 @@ class Grammage(Base):
     tolerance = Column(String(150))
     url = Column(String(150), nullable=True)
     status = Column(Integer, default=1)
-    created_at = Column(DateTime, default=datetime.datetime.now)
+    created_at = Column(DateTime, default=now_bogota)
     updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
+        DateTime, default=now_bogota, onupdate=now_bogota
     )
 
     def __repr__(self):

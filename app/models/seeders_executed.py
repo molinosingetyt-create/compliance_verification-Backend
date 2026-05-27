@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import Session
-import datetime
 from app.models.base import Base
+from app.lib.timezone import now_bogota
 
 
 # Modelo de control
@@ -9,10 +9,10 @@ class SeederExecuted(Base):
     __tablename__ = "seeders_executed"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
-    executed_at = Column(DateTime, default=datetime.datetime.now)
-    created_at = Column(DateTime, default=datetime.datetime.now)
+    executed_at = Column(DateTime, default=now_bogota)
+    created_at = Column(DateTime, default=now_bogota)
     updated_at = Column(
-        DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now
+        DateTime, default=now_bogota, onupdate=now_bogota
     )
 
 

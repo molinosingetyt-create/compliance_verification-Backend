@@ -1,3 +1,7 @@
+import os
+
+os.environ.setdefault("TZ", "America/Bogota")
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 import os
@@ -31,10 +35,6 @@ from seeders.parameter_seeders import (
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Crea las tablas
-Base.metadata.create_all(bind=engine)
-
 
 def run_all_seeders():
     db = SessionLocal()
@@ -76,5 +76,18 @@ app.include_router(
     compliance_verification_router.router, prefix="/v1/compliance_verifications"
 )
 
-# Ejecutar seeders al arrancar la aplicación
-run_all_seeders()
+@app.on_event("startup")
+def on_startup():
+    # No hacemos fallar el servidor si la DB está caída/mal configurada.
+    # En ese caso, los endpoints que requieran DB fallarán cuando intenten usarla,
+    # pero el proceso se mantiene vivo y deja el error en logs.
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        logger.exception("Error conectando/initializando la base de datos (create_all).")
+        return
+
+    try:
+        run_all_seeders()
+    except Exception:
+        logger.exception("Error ejecutando seeders en startup.")
