@@ -1,109 +1,53 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+
 from app.controllers.grammage_controller import GrammageController
-from app.forms.grammage_form import CreateGrammageForm
-from app.schemas.response_schemas import (
-    GrammageResponse,
-    GrammageListResponse,
-    BadRequestResponse,
-    NotFoundResponse,
-    InternalServerErrorResponse,
-)
+from app.forms.grammage_form import CreateGrammageForm, UpdateGrammageForm
+from app.lib.security.deps import get_current_user, require_permission
 
 router = APIRouter()
+_manage = Depends(require_permission("catalog:manage"))
 
 
-@router.get(
-    "/list/all",
-    tags=["grammage"],
-    response_model=GrammageListResponse,
-    responses={
-        200: {
-            "description": "Gramajes obtenidos exitosamente",
-            "model": GrammageListResponse,
-        },
-        500: {
-            "description": "Error interno del servidor",
-            "model": InternalServerErrorResponse,
-        },
-    },
-)
-async def get_all_grammages():
-    """
-    Obtiene todos los gramajes.
-
-    **Respuestas:**
-    - **200**: Retorna lista de gramajes exitosamente
-    - **500**: Error al consultar la base de datos
-    """
-    return GrammageController.get_all()
+@router.get("/list/all", tags=["grammage"])
+async def get_all_grammages(_user=Depends(get_current_user)):
+    return GrammageController.list_active()
 
 
-@router.get(
-    "/list",
-    tags=["grammage"],
-    response_model=GrammageResponse,
-    responses={
-        200: {
-            "description": "Gramaje obtenido exitosamente",
-            "model": GrammageResponse,
-        },
-        404: {
-            "description": "Gramaje no encontrado",
-            "model": NotFoundResponse,
-        },
-        500: {
-            "description": "Error interno del servidor",
-            "model": InternalServerErrorResponse,
-        },
-    },
-)
-async def get_grammage_by_id(id: int = Query(..., description="ID del gramaje")):
-    """
-    Obtiene un gramaje por su ID.
+@router.get("/manage", tags=["grammage"], dependencies=[_manage])
+async def manage_list_grammages():
+    return GrammageController.list_all()
 
-    **Parámetros:**
-    - **id**: ID único del gramaje
 
-    **Respuestas:**
-    - **200**: Gramaje encontrado y retornado exitosamente
-    - **404**: No existe un gramaje con el ID proporcionado
-    - **500**: Error al consultar la base de datos
-    """
+@router.get("/list", tags=["grammage"])
+async def get_grammage_by_id(
+    id: int = Query(..., description="ID del gramaje"),
+    _user=Depends(get_current_user),
+):
     return GrammageController.get_by_id(id)
 
 
-@router.post(
-    "/create",
-    tags=["grammage"],
-    response_model=GrammageResponse,
-    responses={
-        200: {
-            "description": "Gramaje creado exitosamente",
-            "model": GrammageResponse,
-        },
-        400: {
-            "description": "Solicitud inválida - Campos requeridos faltantes",
-            "model": BadRequestResponse,
-        },
-        500: {
-            "description": "Error interno del servidor",
-            "model": InternalServerErrorResponse,
-        },
-    },
-)
+@router.get("/{grammage_id}", tags=["grammage"], dependencies=[_manage])
+async def get_grammage_by_path_id(grammage_id: int):
+    return GrammageController.get_by_id(grammage_id, include_inactive=True)
+
+
+@router.post("/create", tags=["grammage"], dependencies=[_manage])
 async def create_grammage(grammage_data: CreateGrammageForm):
-    """
-    Crea un nuevo gramaje.
+    return GrammageController.create(
+        grammage_data.name,
+        grammage_data.alias,
+        grammage_data.tolerance,
+        grammage_data.url,
+    )
 
-    **Request Body:**
-    - **name** (str): Nombre del gramaje
-    - **alias** (str): Alias del gramaje
-    - **tolerance** (str): tolerancia del gramaje
 
-    **Respuestas:**
-    - **200**: Gramaje creado exitosamente
-    - **400**: Datos inválidos o campos requeridos faltantes
-    - **500**: Error al crear el gramaje en la base de datos
-    """
-    controller = GrammageController()
-    return controller.create_grammage(grammage_data)
+@router.put("/{grammage_id}", tags=["grammage"], dependencies=[_manage])
+async def update_grammage(grammage_id: int, body: UpdateGrammageForm):
+    return GrammageController.update(
+        grammage_id, body.name, body.alias, body.tolerance, body.url
+    )
+
+
+@router.delete("/{grammage_id}", tags=["grammage"], dependencies=[_manage])
+async def delete_grammage(grammage_id: int):
+    return GrammageController.delete(grammage_id)

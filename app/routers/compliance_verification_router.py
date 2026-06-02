@@ -4,6 +4,7 @@ from app.controllers.compliance_verification_controller import (
 )
 from app.forms.compliance_verification_form import CreateComplianceVerificationForm
 from app.lib.config.database import get_db
+from app.lib.security.deps import require_permission
 from app.schemas.response_schemas import (
     ComplianceVerificationResponse,
     BadRequestResponse,
@@ -36,6 +37,7 @@ router = APIRouter()
 )
 async def create_compliance_verification(
     compliance_verification_data: CreateComplianceVerificationForm,
+    _user=Depends(require_permission("sampling:create")),
 ):
     """
         Crea una nueva verificación de cumplimiento junto con los items de muestreo.
@@ -65,7 +67,7 @@ async def create_compliance_verification(
     return controller.create(compliance_verification_data)
 
 
-@router.get("/list-all", tags=["compliance_verifications"])
+@router.get("/list-all", tags=["compliance_verifications"], dependencies=[Depends(require_permission("sampling:view"))])
 async def list_compliance_verifications():
     """
     **Respuestas:**
@@ -77,7 +79,7 @@ async def list_compliance_verifications():
     return controller.get_all()
 
 
-@router.get("/list/{id}", tags=["compliance_verifications"])
+@router.get("/list/{id}", tags=["compliance_verifications"], dependencies=[Depends(require_permission("sampling:view"))])
 async def list_compliance_verifications_id(id: int):
     """
 
@@ -91,3 +93,56 @@ async def list_compliance_verifications_id(id: int):
     """
     controller = ComplianceVerificationController()
     return controller.get_by_id(id)
+
+
+@router.get(
+    "/list/{id}/package-weights",
+    tags=["compliance_verifications"],
+    dependencies=[Depends(require_permission("sampling:view"))],
+)
+async def list_compliance_verification_package_weights(id: int):
+    """
+    Devuelve los pesos de empaques (sin contenido) asociados a una verificación,
+    y el promedio calculado.
+    """
+    controller = ComplianceVerificationController()
+    return controller.get_package_weights(id)
+
+
+from typing import Optional
+
+from pydantic import BaseModel, model_validator
+
+
+class UpdateItemRequest(BaseModel):
+    sample_weight_agm: Optional[float] = None
+    actual_quantity: Optional[float] = None
+
+    @model_validator(mode="after")
+    def require_one_field(self):
+        if self.sample_weight_agm is None and self.actual_quantity is None:
+            raise ValueError("Debe enviar sample_weight_agm o actual_quantity")
+        return self
+
+
+@router.put(
+    "/items/{item_id}",
+    tags=["compliance_verifications"],
+    dependencies=[Depends(require_permission("sampling:edit"))],
+)
+async def update_item_sampling(item_id: int, data: UpdateItemRequest):
+    """
+    Edita un ítem del muestreo y recalcula la fila y el veredicto global.
+
+    - **sample_weight_agm**: recalcula Qi (= AGM − promedio empaque), ATM y T1/T2.
+    - **actual_quantity** (Qi): ajusta AGM coherente y recalcula T1/T2.
+
+    Tras guardar reevalúa: errores T1/T2 por ítem, límite de T1 del lote,
+    promedio neto vs nominal → status CUMPLE (1) / NO CUMPLE (2).
+    """
+    controller = ComplianceVerificationController()
+    return controller.update_item(
+        item_id,
+        sample_weight_agm=data.sample_weight_agm,
+        actual_quantity=data.actual_quantity,
+    )

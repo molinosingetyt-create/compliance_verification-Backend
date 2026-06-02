@@ -5,3 +5,5 @@ pydantic_settings
 black
 psycopg2-binary
 boto3
+PyJWT
+passlib

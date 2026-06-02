@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     SMTP_PORT: Optional[str] = None
     SMTP_USER: Optional[str] = None
     SMTP_PASS: Optional[str] = None
+    DEFAULT_ADMIN_USER: Optional[str] = None
+    DEFAULT_ADMIN_PASS: Optional[str] = None
+    DEFAULT_ADMIN_FULL_NAME: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"

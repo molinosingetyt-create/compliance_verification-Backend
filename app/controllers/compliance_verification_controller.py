@@ -1,8 +1,10 @@
 import statistics
+from typing import Optional
 
 from fastapi import HTTPException
 from app.models.compliance_verification import ComplianceVerification
 from app.models.item_compliance_verification import ItemComplianceVerification
+from app.models.package_weight import PackageWeight
 from app.models.parameters.units_packed_hour import UnitsPackedHour
 from app.models.parameters.grammage import Grammage
 from app.models.parameters.lot_size import LotSize
@@ -12,7 +14,77 @@ from fastapi.encoders import jsonable_encoder
 import logging
 
 
+ALLOWED_MARKET_DESTINATIONS = frozenset({"nacional", "exportacion"})
+
+
 class ComplianceVerificationController:
+    @staticmethod
+    def _compute_item_status(actual_quantity: float, nominal_value: float, tolerance: float) -> int:
+        limit_t1 = nominal_value - tolerance
+        limit_t2 = nominal_value - (tolerance * 2)
+        if actual_quantity < limit_t2:
+            return 3
+        if actual_quantity < limit_t1:
+            return 2
+        return 1
+
+    @staticmethod
+    def _recompute_verification_status(verification: ComplianceVerification, nominal_value: float, tolerance: float):
+        items = verification.item_compliance_verifications or []
+        count_t1 = 0
+        count_t2 = 0
+        net_sum = 0.0
+
+        for item in items:
+            try:
+                aq = float(item.actual_quantity)
+            except Exception:
+                aq = 0.0
+            net_sum += aq
+            new_status = ComplianceVerificationController._compute_item_status(aq, nominal_value, tolerance)
+            item.status = new_status
+            if new_status == 2:
+                count_t1 += 1
+            elif new_status == 3:
+                count_t1 += 1
+                count_t2 += 1
+
+        # reglas de lote
+        allowed_t1 = 0
+        try:
+            with SessionLocal() as db:
+                units_hour = (
+                    db.query(UnitsPackedHour)
+                    .filter(
+                        UnitsPackedHour.packaging_machine_id == verification.machine_id,
+                        UnitsPackedHour.grammage_id == verification.grammage_id,
+                        UnitsPackedHour.status == 1,
+                    )
+                    .first()
+                )
+                if units_hour:
+                    lot_size = ComplianceVerificationController.get_sample_size(int(units_hour.value), db)
+                    if lot_size:
+                        allowed_t1 = int(lot_size.allowed_with_error)
+        except Exception:
+            allowed_t1 = 0
+
+        final_status = 1
+        if count_t2 > 0 or count_t1 > allowed_t1:
+            final_status = 2
+        n = len(items)
+        avg_net = (net_sum / n) if n > 0 else 0
+        if avg_net < nominal_value:
+            final_status = 2
+        verification.status = final_status
+
+        return {
+            "verification_status": final_status,
+            "errors_found": {"T1": count_t1, "T2": count_t2},
+            "allowed_t1": allowed_t1,
+            "avg_net_weight": round(avg_net, 2),
+        }
+
 
     @staticmethod
     def create(data):
@@ -25,6 +97,7 @@ class ComplianceVerificationController:
                 "product_id",
                 "brand_id",
                 "sampled",
+                "market_destination",
                 "analyzed",
                 "lot_expires",
             ]
@@ -36,6 +109,13 @@ class ComplianceVerificationController:
             if not isinstance(data.items, list) or len(data.items) == 0:
                 raise HTTPException(
                     status_code=400, detail="La lista de ítems no puede estar vacía"
+                )
+
+            market_destination = (getattr(data, "market_destination", None) or "").strip().lower()
+            if market_destination not in ALLOWED_MARKET_DESTINATIONS:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Destino comercial inválido. Use nacional o exportacion.",
                 )
 
             with SessionLocal() as db:
@@ -151,6 +231,7 @@ class ComplianceVerificationController:
                 # 5️⃣ Guardar Verificación Principal
                 verification = ComplianceVerification(
                     sampled=data.sampled,
+                    market_destination=market_destination,
                     product_id=data.product_id,
                     brand_id=data.brand_id,
                     grammage_id=data.grammage_id,
@@ -162,6 +243,26 @@ class ComplianceVerificationController:
 
                 db.add(verification)
                 db.commit()
+
+                # 5.1️⃣ Guardar pesos de empaques (si vienen en el request)
+                if getattr(data, "package_weights", None):
+                    weights_to_save = []
+                    for w in data.package_weights:
+                        if w is None:
+                            continue
+                        s = str(w).strip()
+                        if s == "":
+                            continue
+                        weights_to_save.append(
+                            PackageWeight(
+                                compliance_verification_id=verification.id,
+                                weight=s,
+                            )
+                        )
+                    if weights_to_save:
+                        db.bulk_save_objects(weights_to_save)
+                        db.commit()
+
                 for i in items_to_save:
                     i.compliance_verification_id = verification.id
                 db.bulk_save_objects(items_to_save)
@@ -298,6 +399,11 @@ class ComplianceVerificationController:
                     "id": v.id,
                     "created_at": v.created_at.strftime("%Y-%m-%d %H:%M:%S"),
                     "sampled": v.sampled,
+                    "market_destination": v.market_destination,
+                    "product_id": v.product_id,
+                    "machine_id": v.machine_id,
+                    "brand_id": v.brand_id,
+                    "grammage_id": v.grammage_id,
                     "product_name": v.product.name if v.product else None,
                     "machine_name": v.machine.name if v.machine else None,
                     "grammage_name": v.grammage.name if v.grammage else None,
@@ -336,6 +442,7 @@ class ComplianceVerificationController:
                 db.query(ComplianceVerification)
                 .options(
                     joinedload(ComplianceVerification.item_compliance_verifications),
+                    joinedload(ComplianceVerification.package_weights),
                     joinedload(ComplianceVerification.product),
                     joinedload(ComplianceVerification.brand),
                     joinedload(ComplianceVerification.grammage),
@@ -359,3 +466,148 @@ class ComplianceVerificationController:
             raise HTTPException(status_code=500, detail=str(e))
         finally:
             db.close()
+
+    @staticmethod
+    def get_package_weights(id):
+        db = SessionLocal()
+        try:
+            verification = (
+                db.query(ComplianceVerification)
+                .options(joinedload(ComplianceVerification.package_weights))
+                .filter(ComplianceVerification.id == id)
+                .first()
+            )
+
+            if not verification:
+                raise HTTPException(status_code=404, detail="Verificación no encontrada")
+
+            weights = []
+            for w in verification.package_weights or []:
+                try:
+                    weights.append(float(w.weight))
+                except Exception:
+                    # si por alguna razón hay valores no numéricos, los devolvemos como string
+                    pass
+
+            avg = round(sum(weights) / len(weights), 2) if weights else 0
+            return {"package_weights": weights, "average_weight": avg}
+        except HTTPException:
+            raise
+        except Exception as e:
+            logging.exception("Error obteniendo pesos de empaques")
+            raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            db.close()
+
+    @staticmethod
+    def _package_average_for_verification(verification: ComplianceVerification) -> float:
+        weights = []
+        for w in verification.package_weights or []:
+            try:
+                weights.append(float(w.weight))
+            except (TypeError, ValueError):
+                continue
+        return round(sum(weights) / len(weights), 2) if weights else 0.0
+
+    @staticmethod
+    def _apply_item_weights_from_agm(item: ItemComplianceVerification, agm: float, package_avg: float):
+        """Qi = AGM − promedio empaque; ATM (campo average_weight) = AGM − Qi."""
+        qi = round(agm - package_avg, 2)
+        item.sample_weight_agm = str(round(agm, 2))
+        item.actual_quantity = str(qi)
+        item.average_weight = str(round(agm - qi, 2))
+
+    @staticmethod
+    def _apply_item_weights_from_qi(item: ItemComplianceVerification, qi: float, package_avg: float):
+        agm = round(qi + package_avg, 2)
+        item.actual_quantity = str(round(qi, 2))
+        item.sample_weight_agm = str(agm)
+        item.average_weight = str(round(agm - qi, 2))
+
+    @staticmethod
+    def update_item(
+        item_id: int,
+        sample_weight_agm: Optional[float] = None,
+        actual_quantity: Optional[float] = None,
+    ):
+        if sample_weight_agm is None and actual_quantity is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Debe enviar sample_weight_agm o actual_quantity",
+            )
+
+        with SessionLocal() as db:
+            item = (
+                db.query(ItemComplianceVerification)
+                .filter(ItemComplianceVerification.id == item_id)
+                .first()
+            )
+            if not item:
+                raise HTTPException(status_code=404, detail="Ítem no encontrado")
+
+            verification = (
+                db.query(ComplianceVerification)
+                .options(joinedload(ComplianceVerification.item_compliance_verifications))
+                .options(joinedload(ComplianceVerification.package_weights))
+                .options(joinedload(ComplianceVerification.grammage))
+                .filter(ComplianceVerification.id == item.compliance_verification_id)
+                .first()
+            )
+            if not verification:
+                raise HTTPException(status_code=404, detail="Verificación no encontrada")
+
+            package_avg = ComplianceVerificationController._package_average_for_verification(
+                verification
+            )
+
+            if sample_weight_agm is not None:
+                agm = float(sample_weight_agm)
+                if agm <= 0:
+                    raise HTTPException(status_code=400, detail="AGM debe ser mayor que cero")
+                ComplianceVerificationController._apply_item_weights_from_agm(
+                    item, agm, package_avg
+                )
+            else:
+                qi = float(actual_quantity)
+                ComplianceVerificationController._apply_item_weights_from_qi(
+                    item, qi, package_avg
+                )
+
+            grammage_obj = (
+                db.query(Grammage)
+                .filter(Grammage.id == verification.grammage_id)
+                .first()
+            )
+            if not grammage_obj:
+                raise HTTPException(status_code=404, detail="Gramaje no encontrado")
+
+            nominal_value = float("".join(filter(str.isdigit, grammage_obj.name)) or 0)
+            try:
+                tolerance = float(grammage_obj.tolerance)
+            except Exception:
+                tolerance = 0.0
+
+            metrics = ComplianceVerificationController._recompute_verification_status(
+                verification, nominal_value, tolerance
+            )
+
+            db.add(item)
+            db.add(verification)
+            db.commit()
+            db.refresh(item)
+            db.refresh(verification)
+
+            verdict = "CUMPLE" if metrics["verification_status"] == 1 else "NO CUMPLE"
+            return {
+                "detail": f"Ítem actualizado. Veredicto del muestreo: {verdict}.",
+                "metrics": metrics,
+                "item": item.toDict(),
+                "verification": verification.toDict(),
+            }
+
+    @staticmethod
+    def update_item_actual_quantity(item_id: int, actual_quantity: float):
+        """Compatibilidad: edición directa de Qi."""
+        return ComplianceVerificationController.update_item(
+            item_id, actual_quantity=actual_quantity
+        )

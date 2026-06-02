@@ -1,109 +1,52 @@
 from fastapi import APIRouter, Depends, Query
+
 from app.controllers.product_controller import ProductController
-from app.forms.product_form import CreateProductForm
-from app.lib.config.database import get_db
-from app.schemas.response_schemas import (
-    ProductResponse,
-    ProductListResponse,
-    BadRequestResponse,
-    NotFoundResponse,
-    InternalServerErrorResponse,
-)
+from app.forms.product_form import CreateProductForm, UpdateProductForm
+from app.lib.security.deps import get_current_user, require_permission
 
 router = APIRouter()
+_manage = Depends(require_permission("catalog:manage"))
 
 
-@router.get(
-    "/list/all",
-    tags=["products"],
-    response_model=ProductListResponse,
-    responses={
-        200: {
-            "description": "Productos obtenidos exitosamente",
-            "model": ProductListResponse,
-        },
-        500: {
-            "description": "Error interno del servidor",
-            "model": InternalServerErrorResponse,
-        },
-    },
-)
-async def get_all_products():
-    """
-    Obtiene todos los productos.
-
-    **Respuestas:**
-    - **200**: Retorna lista de productos exitosamente
-    - **500**: Error al consultar la base de datos
-    """
-    return ProductController.get_all()
+@router.get("/list/all", tags=["products"])
+async def get_all_products(_user=Depends(get_current_user)):
+    """Listado activo para muestreo y selects."""
+    return ProductController.list_active()
 
 
-@router.get(
-    "/list",
-    tags=["products"],
-    response_model=ProductResponse,
-    responses={
-        200: {
-            "description": "Producto obtenido exitosamente",
-            "model": ProductResponse,
-        },
-        404: {
-            "description": "Producto no encontrado",
-            "model": NotFoundResponse,
-        },
-        500: {
-            "description": "Error interno del servidor",
-            "model": InternalServerErrorResponse,
-        },
-    },
-)
-async def get_product_by_id(id: int = Query(..., description="ID del producto")):
-    """
-    Obtiene un producto por su ID.
+@router.get("/manage", tags=["products"], dependencies=[_manage])
+async def manage_list_products():
+    """Listado completo para administración (ID ascendente)."""
+    return ProductController.list_all()
 
-    **Parámetros:**
-    - **id**: ID único del producto
 
-    **Respuestas:**
-    - **200**: Producto encontrado y retornado exitosamente
-    - **404**: No existe un producto con el ID proporcionado
-    - **500**: Error al consultar la base de datos
-    """
+@router.get("/list", tags=["products"])
+async def get_product_by_id(
+    id: int = Query(..., description="ID del producto"),
+    _user=Depends(get_current_user),
+):
     return ProductController.get_by_id(id)
 
 
-@router.post(
-    "/create",
-    tags=["products"],
-    response_model=ProductResponse,
-    responses={
-        200: {
-            "description": "Producto creado exitosamente",
-            "model": ProductResponse,
-        },
-        400: {
-            "description": "Solicitud inválida - Campos requeridos faltantes",
-            "model": BadRequestResponse,
-        },
-        500: {
-            "description": "Error interno del servidor",
-            "model": InternalServerErrorResponse,
-        },
-    },
-)
+@router.get("/{product_id}", tags=["products"], dependencies=[_manage])
+async def get_product_by_path_id(product_id: int):
+    return ProductController.get_by_id(product_id, include_inactive=True)
+
+
+@router.post("/create", tags=["products"], dependencies=[_manage])
 async def create_product(product_data: CreateProductForm):
-    """
-    Crea un nuevo producto.
+    return ProductController.create(
+        product_data.name, product_data.alias, product_data.url
+    )
 
-    **Request Body:**
-    - **name** (str): Nombre del producto
-    - **alias** (str): Alias del producto
 
-    **Respuestas:**
-    - **200**: Producto creado exitosamente
-    - **400**: Datos inválidos o campos requeridos faltantes
-    - **500**: Error al crear el producto en la base de datos
-    """
-    controller = ProductController()
-    return controller.create_product(product_data)
+@router.put("/{product_id}", tags=["products"], dependencies=[_manage])
+async def update_product(product_id: int, body: UpdateProductForm):
+    return ProductController.update(
+        product_id, body.name, body.alias, body.url
+    )
+
+
+@router.delete("/{product_id}", tags=["products"], dependencies=[_manage])
+async def delete_product(product_id: int):
+    return ProductController.delete(product_id)

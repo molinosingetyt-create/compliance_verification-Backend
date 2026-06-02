@@ -1,66 +1,105 @@
+from typing import Optional
+
 from fastapi import HTTPException
-from app.models.parameters.product import Product
 from app.lib.config.database import SessionLocal
+from app.models.compliance_verification import ComplianceVerification
+from app.models.parameters.product import Product
 
 
 class ProductController:
     @staticmethod
-    def get_all():
-        """
-        Obtiene todos los productos.
-        """
-        db = SessionLocal()
-        try:
-            products = (
-                db.query(Product).filter(Product.status == 1).order_by(Product.id).all()
-            )
-            return {"data": products, "message": "Productos obtenidos exitosamente"}
-        except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Error al obtener productos: {str(e)}"
-            )
-        finally:
-            db.close()
+    def _to_dict(row: Product) -> dict:
+        return row.toDict()
 
     @staticmethod
-    def get_by_id(product_id: int):
-        """
-        Obtiene un producto por su ID.
-        """
-        db = SessionLocal()
-        try:
-            product = (
+    def list_active():
+        with SessionLocal() as db:
+            rows = (
                 db.query(Product)
-                .filter(Product.id == product_id, Product.status == 1)
-                .first()
+                .filter(Product.status == 1)
+                .order_by(Product.id.asc())
+                .all()
             )
-            if not product:
-                raise HTTPException(status_code=404, detail="Producto no encontrado")
-            return product
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Error al obtener producto: {str(e)}"
-            )
-        finally:
-            db.close()
+            return {"data": [ProductController._to_dict(r) for r in rows]}
 
-    def create_product(self, product_data: Product):
-        """
-        Crea un nuevo producto.
-        """
-        db = SessionLocal()
-        try:
-            new_product = Product(**product_data.dict())
-            db.add(new_product)
+    @staticmethod
+    def list_all():
+        with SessionLocal() as db:
+            rows = db.query(Product).order_by(Product.id.asc()).all()
+            return [ProductController._to_dict(r) for r in rows]
+
+    @staticmethod
+    def get_by_id(product_id: int, include_inactive: bool = False):
+        with SessionLocal() as db:
+            q = db.query(Product).filter(Product.id == product_id)
+            if not include_inactive:
+                q = q.filter(Product.status == 1)
+            row = q.first()
+            if not row:
+                raise HTTPException(status_code=404, detail="Producto no encontrado")
+            return ProductController._to_dict(row)
+
+    @staticmethod
+    def create(name: str, alias: str, url: Optional[str] = None):
+        name = (name or "").strip()
+        alias = (alias or "").strip()
+        if not name or not alias:
+            raise HTTPException(status_code=400, detail="Nombre y alias son obligatorios")
+        with SessionLocal() as db:
+            if db.query(Product).filter(Product.name == name).first():
+                raise HTTPException(status_code=400, detail="Ya existe un producto con ese nombre")
+            row = Product(name=name, alias=alias, url=url, status=1)
+            db.add(row)
             db.commit()
-            db.refresh(new_product)
-            return new_product
-        except Exception as e:
-            db.rollback()
-            raise HTTPException(
-                status_code=500, detail=f"Error al crear producto: {str(e)}"
+            db.refresh(row)
+            return ProductController._to_dict(row)
+
+    @staticmethod
+    def update(
+        product_id: int,
+        name: Optional[str] = None,
+        alias: Optional[str] = None,
+        url: Optional[str] = None,
+        status: Optional[int] = None,
+    ):
+        with SessionLocal() as db:
+            row = db.query(Product).filter(Product.id == product_id).first()
+            if not row:
+                raise HTTPException(status_code=404, detail="Producto no encontrado")
+            if name is not None:
+                name = name.strip()
+                if not name:
+                    raise HTTPException(status_code=400, detail="El nombre no puede estar vacío")
+                other = db.query(Product).filter(Product.name == name, Product.id != row.id).first()
+                if other:
+                    raise HTTPException(status_code=400, detail="Ya existe un producto con ese nombre")
+                row.name = name
+            if alias is not None:
+                row.alias = alias.strip()
+            if url is not None:
+                row.url = url.strip() or None
+            if status is not None:
+                row.status = status
+            db.commit()
+            db.refresh(row)
+            return ProductController._to_dict(row)
+
+    @staticmethod
+    def delete(product_id: int):
+        with SessionLocal() as db:
+            row = db.query(Product).filter(Product.id == product_id).first()
+            if not row:
+                raise HTTPException(status_code=404, detail="Producto no encontrado")
+            in_use = (
+                db.query(ComplianceVerification)
+                .filter(ComplianceVerification.product_id == product_id)
+                .count()
             )
-        finally:
-            db.close()
+            if in_use > 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"No se puede eliminar: usado en {in_use} verificación(es)",
+                )
+            row.status = 0
+            db.commit()
+            return {"detail": "Producto eliminado"}

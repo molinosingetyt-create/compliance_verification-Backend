@@ -1,0 +1,10 @@
+from . import admin_router  # noqa: F401
+from . import auth_router  # noqa: F401
+from . import brand_router  # noqa: F401
+from . import compliance_verification_router  # noqa: F401
+from . import grammage_router  # noqa: F401
+from . import lot_size_router  # noqa: F401
+from . import packaging_area_router  # noqa: F401
+from . import packaging_machine_router  # noqa: F401
+from . import product_router  # noqa: F401
+from . import units_packed_hour_router  # noqa: F401
