@@ -189,13 +189,23 @@ class AdminController:
     @staticmethod
     def list_users():
         with SessionLocal() as db:
-            users = db.query(User).options(joinedload(User.role)).order_by(User.id.asc()).all()
+            users = (
+                db.query(User)
+                .options(joinedload(User.role), joinedload(User.packaging_area))
+                .order_by(User.id.asc())
+                .all()
+            )
             return [u.toDict() for u in users]
 
     @staticmethod
     def get_user(user_id: int):
         with SessionLocal() as db:
-            u = db.query(User).options(joinedload(User.role)).filter(User.id == user_id).first()
+            u = (
+                db.query(User)
+                .options(joinedload(User.role), joinedload(User.packaging_area))
+                .filter(User.id == user_id)
+                .first()
+            )
             if not u:
                 raise HTTPException(status_code=404, detail="Usuario no encontrado")
             return u.toDict()
@@ -207,6 +217,7 @@ class AdminController:
         role_id: int,
         is_active: bool = True,
         full_name: Optional[str] = None,
+        packaging_area_id: Optional[int] = None,
     ):
         username = (username or "").strip()
         if not username or not password:
@@ -215,9 +226,12 @@ class AdminController:
             role = db.query(Role).filter(Role.id == role_id).first()
             if not role:
                 raise HTTPException(status_code=404, detail="Perfil no encontrado")
+            if packaging_area_id is None:
+                raise HTTPException(status_code=400, detail="El área de empaque es obligatoria")
             exists = db.query(User).filter(User.username == username).first()
             if exists:
                 raise HTTPException(status_code=400, detail="El usuario ya existe")
+            area_id = AdminController._resolve_packaging_area_id(db, packaging_area_id)
             fn = (full_name or "").strip() or None
             u = User(
                 username=username,
@@ -225,11 +239,17 @@ class AdminController:
                 password_hash=hash_password(password),
                 role_id=role.id,
                 is_active=is_active,
+                packaging_area_id=area_id,
             )
             db.add(u)
             db.commit()
             db.refresh(u)
-            u = db.query(User).options(joinedload(User.role)).filter(User.id == u.id).first()
+            u = (
+                db.query(User)
+                .options(joinedload(User.role), joinedload(User.packaging_area))
+                .filter(User.id == u.id)
+                .first()
+            )
             return u.toDict()
 
     @staticmethod
@@ -240,9 +260,15 @@ class AdminController:
         role_id: Optional[int] = None,
         is_active: Optional[bool] = None,
         full_name: Optional[str] = None,
+        packaging_area_id: Optional[int] = None,
     ):
         with SessionLocal() as db:
-            u = db.query(User).options(joinedload(User.role)).filter(User.id == user_id).first()
+            u = (
+                db.query(User)
+                .options(joinedload(User.role), joinedload(User.packaging_area))
+                .filter(User.id == user_id)
+                .first()
+            )
             if not u:
                 raise HTTPException(status_code=404, detail="Usuario no encontrado")
             if username is not None:
@@ -264,10 +290,34 @@ class AdminController:
                 u.is_active = is_active
             if full_name is not None:
                 u.full_name = full_name.strip() or None
+            if packaging_area_id is not None:
+                u.packaging_area_id = AdminController._resolve_packaging_area_id(
+                    db, packaging_area_id
+                )
             db.commit()
             db.refresh(u)
-            u = db.query(User).options(joinedload(User.role)).filter(User.id == u.id).first()
+            u = (
+                db.query(User)
+                .options(joinedload(User.role), joinedload(User.packaging_area))
+                .filter(User.id == u.id)
+                .first()
+            )
             return u.toDict()
+
+    @staticmethod
+    def _resolve_packaging_area_id(db, packaging_area_id: Optional[int]) -> Optional[int]:
+        if packaging_area_id is None:
+            return None
+        from app.models.parameters.packaging_area import PackagingArea
+
+        area = (
+            db.query(PackagingArea)
+            .filter(PackagingArea.id == packaging_area_id, PackagingArea.status == 1)
+            .first()
+        )
+        if not area:
+            raise HTTPException(status_code=404, detail="Área de empaque no encontrada")
+        return area.id
 
     @staticmethod
     def delete_user(user_id: int):

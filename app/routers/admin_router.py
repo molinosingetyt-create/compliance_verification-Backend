@@ -97,6 +97,7 @@ class CreateUserBody(BaseModel):
     role_id: int
     is_active: bool = True
     full_name: Optional[str] = None
+    packaging_area_id: int
 
 
 class UpdateUserBody(BaseModel):
@@ -105,6 +106,7 @@ class UpdateUserBody(BaseModel):
     role_id: Optional[int] = None
     is_active: Optional[bool] = None
     full_name: Optional[str] = None
+    packaging_area_id: Optional[int] = None
 
 
 @router.get("/users", tags=["admin"])
@@ -120,7 +122,12 @@ async def admin_get_user(user_id: int):
 @router.post("/users", tags=["admin"])
 async def admin_create_user(body: CreateUserBody):
     return AdminController.create_user(
-        body.username, body.password, body.role_id, body.is_active, body.full_name
+        body.username,
+        body.password,
+        body.role_id,
+        body.is_active,
+        body.full_name,
+        body.packaging_area_id,
     )
 
 
@@ -133,6 +140,7 @@ async def admin_update_user(user_id: int, body: UpdateUserBody):
         body.role_id,
         body.is_active,
         body.full_name,
+        body.packaging_area_id,
     )
 
 

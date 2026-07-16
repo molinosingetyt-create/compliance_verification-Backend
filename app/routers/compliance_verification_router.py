@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, Query
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, model_validator
 from app.controllers.compliance_verification_controller import (
     ComplianceVerificationController,
 )
 from app.forms.compliance_verification_form import CreateComplianceVerificationForm
 from app.lib.config.database import get_db
-from app.lib.security.deps import require_permission
+from app.lib.security.deps import get_current_user, require_permission
+from app.lib.security.rbac import get_user_permission_codes
 from app.schemas.response_schemas import (
     ComplianceVerificationResponse,
     BadRequestResponse,
@@ -14,6 +18,15 @@ from app.schemas.response_schemas import (
 )
 
 router = APIRouter()
+
+_COMPLIANCE_READ_CODES = frozenset({"sampling:view", "sampling:view-limited"})
+
+
+def _require_compliance_read(user=Depends(get_current_user), db=Depends(get_db)):
+    codes = get_user_permission_codes(db, user.id)
+    if not codes & _COMPLIANCE_READ_CODES:
+        raise HTTPException(status_code=403, detail="Sin permiso")
+    return {"user": user, "codes": codes}
 
 
 @router.post(
@@ -37,7 +50,7 @@ router = APIRouter()
 )
 async def create_compliance_verification(
     compliance_verification_data: CreateComplianceVerificationForm,
-    _user=Depends(require_permission("sampling:create")),
+    user=Depends(require_permission("sampling:create")),
 ):
     """
         Crea una nueva verificación de cumplimiento junto con los items de muestreo.
@@ -64,11 +77,15 @@ async def create_compliance_verification(
         - **500**: Error al crear la verificación de cumplimiento en la base de datos
     """
     controller = ComplianceVerificationController()
-    return controller.create(compliance_verification_data)
+    return controller.create(compliance_verification_data, sampled_by_user_id=user.id)
 
 
-@router.get("/list-all", tags=["compliance_verifications"], dependencies=[Depends(require_permission("sampling:view"))])
-async def list_compliance_verifications():
+@router.get("/list-all", tags=["compliance_verifications"])
+async def list_compliance_verifications(
+    ctx=Depends(_require_compliance_read),
+    date_from: str | None = Query(None, alias="date_from"),
+    date_to: str | None = Query(None, alias="date_to"),
+):
     """
     **Respuestas:**
     - **200**: Lista de verificaciones de cumplimiento
@@ -76,11 +93,13 @@ async def list_compliance_verifications():
     - **500**: Error al obtener las verificaciones de cumplimiento desde la base de datos
     """
     controller = ComplianceVerificationController()
-    return controller.get_all()
+    return controller.get_all(
+        ctx["user"], ctx["codes"], date_from=date_from, date_to=date_to
+    )
 
 
-@router.get("/list/{id}", tags=["compliance_verifications"], dependencies=[Depends(require_permission("sampling:view"))])
-async def list_compliance_verifications_id(id: int):
+@router.get("/list/{id}", tags=["compliance_verifications"])
+async def list_compliance_verifications_id(id: int, ctx=Depends(_require_compliance_read)):
     """
 
     Query Parameters:
@@ -92,26 +111,54 @@ async def list_compliance_verifications_id(id: int):
         - **500**: Error al obtener las verificaciones de cumplimiento desde la base de datos
     """
     controller = ComplianceVerificationController()
-    return controller.get_by_id(id)
+    return controller.get_by_id(id, ctx["user"], ctx["codes"])
+
+
+@router.delete("/list/{id}", tags=["compliance_verifications"])
+async def delete_compliance_verification(
+    id: int,
+    user=Depends(require_permission("sampling:delete")),
+    db=Depends(get_db),
+):
+    """Elimina (oculta) un muestreo del listado y del dashboard."""
+    codes = get_user_permission_codes(db, user.id)
+    controller = ComplianceVerificationController()
+    return controller.soft_delete(id, user, codes)
 
 
 @router.get(
     "/list/{id}/package-weights",
     tags=["compliance_verifications"],
-    dependencies=[Depends(require_permission("sampling:view"))],
 )
-async def list_compliance_verification_package_weights(id: int):
+async def list_compliance_verification_package_weights(
+    id: int, ctx=Depends(_require_compliance_read)
+):
     """
     Devuelve los pesos de empaques (sin contenido) asociados a una verificación,
     y el promedio calculado.
     """
     controller = ComplianceVerificationController()
-    return controller.get_package_weights(id)
+    return controller.get_package_weights(id, ctx["user"], ctx["codes"])
 
 
-from typing import Optional
+class UpdatePackageWeightsRequest(BaseModel):
+    package_weights: list[float]
 
-from pydantic import BaseModel, model_validator
+
+@router.put(
+    "/list/{id}/package-weights",
+    tags=["compliance_verifications"],
+)
+async def update_compliance_verification_package_weights(
+    id: int,
+    data: UpdatePackageWeightsRequest,
+    user=Depends(require_permission("sampling:edit-package")),
+    db=Depends(get_db),
+):
+    """Actualiza pesos de bolsas vacías y recalcula Qi, T1/T2 y veredicto del muestreo."""
+    codes = get_user_permission_codes(db, user.id)
+    controller = ComplianceVerificationController()
+    return controller.update_package_weights(id, data.package_weights, user, codes)
 
 
 class UpdateItemRequest(BaseModel):
@@ -128,9 +175,13 @@ class UpdateItemRequest(BaseModel):
 @router.put(
     "/items/{item_id}",
     tags=["compliance_verifications"],
-    dependencies=[Depends(require_permission("sampling:edit"))],
 )
-async def update_item_sampling(item_id: int, data: UpdateItemRequest):
+async def update_item_sampling(
+    item_id: int,
+    data: UpdateItemRequest,
+    user=Depends(require_permission("sampling:edit")),
+    db=Depends(get_db),
+):
     """
     Edita un ítem del muestreo y recalcula la fila y el veredicto global.
 
@@ -140,9 +191,12 @@ async def update_item_sampling(item_id: int, data: UpdateItemRequest):
     Tras guardar reevalúa: errores T1/T2 por ítem, límite de T1 del lote,
     promedio neto vs nominal → status CUMPLE (1) / NO CUMPLE (2).
     """
+    codes = get_user_permission_codes(db, user.id)
     controller = ComplianceVerificationController()
     return controller.update_item(
         item_id,
         sample_weight_agm=data.sample_weight_agm,
         actual_quantity=data.actual_quantity,
+        user=user,
+        permission_codes=codes,
     )

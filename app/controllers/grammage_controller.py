@@ -104,6 +104,7 @@ class GrammageController:
             in_use = (
                 db.query(ComplianceVerification)
                 .filter(ComplianceVerification.grammage_id == grammage_id)
+                .filter(ComplianceVerification.deleted_at.is_(None))
                 .count()
             )
             if in_use > 0:

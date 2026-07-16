@@ -13,10 +13,12 @@ class User(Base):
     password_hash = Column(String(255))
     is_active = Column(Boolean, default=True)
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
+    packaging_area_id = Column(Integer, ForeignKey("packaging_areas.id"), nullable=True)
     created_at = Column(DateTime, default=now_bogota)
     updated_at = Column(DateTime, default=now_bogota, onupdate=now_bogota)
 
     role = relationship("Role", backref="users")
+    packaging_area = relationship("PackagingArea", backref="users")
 
     def __repr__(self):
         return "<User.id %r>" % self.id
@@ -26,6 +28,9 @@ class User(Base):
             c.key: getattr(self, c.key) for c in inspect(self).mapper.column_attrs
         }
         colums["role"] = self.role.toDict() if self.role else None
+        colums["packaging_area"] = (
+            self.packaging_area.toDict() if self.packaging_area else None
+        )
         # no exponer password_hash
         colums.pop("password_hash", None)
         return colums

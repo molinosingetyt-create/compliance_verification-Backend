@@ -45,3 +45,15 @@ def require_permission(code: str):
 
     return _dep
 
+
+def require_any_permission(*codes: str):
+    """Exige al menos uno de los permisos indicados."""
+
+    def _dep(user=Depends(get_current_user), db=Depends(get_db)):
+        user_codes = get_user_permission_codes(db, user.id)
+        if not any(code in user_codes for code in codes):
+            raise HTTPException(status_code=403, detail="Sin permiso")
+        return user
+
+    return _dep
+

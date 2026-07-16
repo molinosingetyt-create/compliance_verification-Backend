@@ -20,11 +20,17 @@ class RbacController:
         - administrador: todo (incluye administración de usuarios)
         - ingeniero: ver + crear + editar muestreo
         - auxiliar: ver + crear muestreo (sin editar)
+        - consulta: verificación limitada (sin cumplimiento ni T1/T2, solo lectura)
         """
         definitions = [
             ("sampling:view", "Ver muestreos, listados y detalles"),
+            ("sampling:view-limited", "Ver verificaciones sin resultado de cumplimiento ni errores T1/T2"),
+            ("sampling:view-all", "Ver todos los muestreos (dashboard y verificaciones)"),
+            ("sampling:view-own", "Ver solo los muestreos realizados por el usuario"),
             ("sampling:create", "Crear muestreo"),
             ("sampling:edit", "Editar muestreo / contenido neto"),
+            ("sampling:edit-package", "Editar pesos de empaque (bolsas vacías)"),
+            ("sampling:delete", "Eliminar muestreos"),
             ("users:manage", "Administrar usuarios, perfiles y permisos"),
             ("catalog:manage", "Administrar productos, marcas y gramajes"),
         ]
@@ -37,18 +43,25 @@ class RbacController:
         profiles = {
             "administrador": [
                 "sampling:view",
+                "sampling:view-all",
                 "sampling:create",
                 "sampling:edit",
+                "sampling:edit-package",
+                "sampling:delete",
                 "users:manage",
                 "catalog:manage",
             ],
             "ingeniero": [
                 "sampling:view",
+                "sampling:view-all",
                 "sampling:create",
                 "sampling:edit",
+                "sampling:edit-package",
+                "sampling:delete",
                 "catalog:manage",
             ],
-            "auxiliar": ["sampling:view", "sampling:create"],
+            "auxiliar": ["sampling:view", "sampling:view-own", "sampling:create"],
+            "consulta": ["sampling:view-limited", "sampling:view-own"],
         }
 
         for role_name, codes in profiles.items():
@@ -79,7 +92,7 @@ class RbacController:
                     db.delete(rp)
 
         db.commit()
-        logger.info("RBAC: permisos y perfiles (administrador/ingeniero/auxiliar) verificados.")
+        logger.info("RBAC: permisos y perfiles (administrador/ingeniero/auxiliar/consulta) verificados.")
 
         # Migración suave desde roles viejos (si existían)
         legacy_map = {"admin": "administrador", "editor": "ingeniero", "viewer": "auxiliar"}

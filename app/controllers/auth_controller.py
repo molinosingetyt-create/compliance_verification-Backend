@@ -48,7 +48,7 @@ class AuthController:
 
             user = (
                 db.query(User)
-                .options(joinedload(User.role))
+                .options(joinedload(User.role), joinedload(User.packaging_area))
                 .filter(User.username == username)
                 .first()
             )

@@ -1,49 +1,68 @@
-# Instalar venv
+# Configuración del backend
 
-sudo apt install python3.12-venv
+## 1. Entorno virtual (Python)
 
-# Instalar entorno de venv
-
+```bash
+sudo apt install python3-venv
 python3 -m venv venv
+```
 
-# Activar entorno local para Windows
+Activar el entorno:
 
-venv\Scripts\activate
+- **Windows:** `venv\Scripts\activate`
+- **Linux / macOS:** `source venv/bin/activate`
 
-# Activar entorno local para MAC o LINUX
+Instalar dependencias:
 
-source venv/bin/activate
-
-# Instalar requerimientos
-
+```bash
 pip3 install -r requirements.txt
+```
 
-# Iniciar fastapi con uvicorn
+## 2. Variables de entorno
 
-uvicorn main:app --reload
+Copia el archivo de ejemplo y ajusta los valores si es necesario:
 
-# -----------------------------------------------
+```bash
+cp .env.example .env
+```
 
-# Instalar base de datos
+Las credenciales de base de datos por defecto son:
 
+- Usuario: `developer`
+- Contraseña: `P@ssw0rd`
+- Base de datos: `molinos`
+
+## 3. PostgreSQL
+
+Instalar y acceder a la consola:
+
+```bash
 sudo apt install postgresql -y
-
-# Acceder a la consola de postgresql
-
 sudo -i -u postgres psql
+```
 
-# Crear usuario en postgresql
+Crear usuario y base de datos (deben coincidir con `.env`):
 
-CREATE ROLE developer WITH LOGIN SUPERUSER PASSWORD 'tu_password';
-
-# Darle permisos
-
+```sql
+CREATE ROLE developer WITH LOGIN SUPERUSER PASSWORD 'P@ssw0rd';
 CREATE DATABASE molinos OWNER developer;
-
-# Salir de la consola de postgresql
-
 \q
+```
 
-# los archivos para dar formato se ejecuta
+Si el usuario ya existe, solo actualiza la contraseña:
 
+```sql
+ALTER ROLE developer WITH PASSWORD 'P@ssw0rd';
+```
+
+## 4. Iniciar la aplicación
+
+```bash
+uvicorn main:app --reload
+```
+
+## 5. Formato de código
+
+```bash
 black .
+```

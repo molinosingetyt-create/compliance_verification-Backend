@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+
 from app.controllers.packaging_area_controller import PackagingAreaController
-from app.forms.packaking_area_form import CreatePackagingAreaForm
+from app.forms.packaking_area_form import CreatePackagingAreaForm, UpdatePackagingAreaForm
+from app.lib.security.deps import get_current_user, require_permission
 from app.schemas.response_schemas import (
     PackagingAreaResponse,
     PackagingAreaListResponse,
@@ -10,6 +12,7 @@ from app.schemas.response_schemas import (
 )
 
 router = APIRouter()
+_manage = Depends(require_permission("catalog:manage"))
 
 
 @router.get(
@@ -27,15 +30,14 @@ router = APIRouter()
         },
     },
 )
-async def get_all_packaging_areas():
-    """
-    Obtiene todas las áreas de empaque.
+async def get_all_packaging_areas(_user=Depends(get_current_user)):
+    """Listado activo para selects y dashboard."""
+    return PackagingAreaController.list_active()
 
-    **Respuestas:**
-    - **200**: Retorna lista de áreas de empaque exitosamente
-    - **500**: Error al consultar la base de datos
-    """
-    return PackagingAreaController.get_all()
+
+@router.get("/manage", tags=["packaging_areas"], dependencies=[_manage])
+async def manage_list_packaging_areas():
+    return PackagingAreaController.list_all()
 
 
 @router.get(
@@ -58,26 +60,22 @@ async def get_all_packaging_areas():
     },
 )
 async def get_packaging_area_by_id(
-    id: int = Query(..., description="ID del área de empaque")
+    id: int = Query(..., description="ID del área de empaque"),
+    _user=Depends(get_current_user),
 ):
-    """
-    Obtiene un área de empaque por su ID.
-
-    **Parámetros:**
-    - **id**: ID único del área de empaque
-
-    **Respuestas:**
-    - **200**: Área de empaque encontrada y retornado exitosamente
-    - **404**: No existe un área de empaque con el ID proporcionado
-    - **500**: Error al consultar la base de datos
-    """
     return PackagingAreaController.get_by_id(id)
+
+
+@router.get("/{packaging_area_id}", tags=["packaging_areas"], dependencies=[_manage])
+async def get_packaging_area_by_path_id(packaging_area_id: int):
+    return PackagingAreaController.get_by_id(packaging_area_id, include_inactive=True)
 
 
 @router.post(
     "/create",
     tags=["packaging_areas"],
     response_model=PackagingAreaResponse,
+    dependencies=[_manage],
     responses={
         200: {
             "description": "Área de empaque creada exitosamente",
@@ -94,17 +92,14 @@ async def get_packaging_area_by_id(
     },
 )
 async def create_packaging_area(packaging_area_data: CreatePackagingAreaForm):
-    """
-    Crea una nueva área de empaque.
+    return PackagingAreaController.create(packaging_area_data.name, packaging_area_data.alias)
 
-    **Request Body:**
-    - **name** (str): Nombre del área de empaque
-    - **alias** (str): Alias del producto
 
-    **Respuestas:**
-    - **200**: Producto creado exitosamente
-    - **400**: Datos inválidos o campos requeridos faltantes
-    - **500**: Error al crear el área de empaque en la base de datos
-    """
-    controller = PackagingAreaController()
-    return controller.create_packaging_area(packaging_area_data)
+@router.put("/{packaging_area_id}", tags=["packaging_areas"], dependencies=[_manage])
+async def update_packaging_area(packaging_area_id: int, body: UpdatePackagingAreaForm):
+    return PackagingAreaController.update(packaging_area_id, body.name, body.alias)
+
+
+@router.delete("/{packaging_area_id}", tags=["packaging_areas"], dependencies=[_manage])
+async def delete_packaging_area(packaging_area_id: int):
+    return PackagingAreaController.delete(packaging_area_id)

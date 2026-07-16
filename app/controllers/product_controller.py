@@ -93,6 +93,7 @@ class ProductController:
             in_use = (
                 db.query(ComplianceVerification)
                 .filter(ComplianceVerification.product_id == product_id)
+                .filter(ComplianceVerification.deleted_at.is_(None))
                 .count()
             )
             if in_use > 0:

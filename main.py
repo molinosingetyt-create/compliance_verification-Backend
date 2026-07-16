@@ -47,6 +47,9 @@ def ensure_schema_columns():
     statements = [
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(150)",
         "ALTER TABLE compliance_verifications ADD COLUMN IF NOT EXISTS market_destination VARCHAR(30)",
+        "ALTER TABLE compliance_verifications ADD COLUMN IF NOT EXISTS sampled_by_user_id INTEGER",
+        "ALTER TABLE compliance_verifications ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS packaging_area_id INTEGER",
     ]
     with engine.connect() as conn:
         for stmt in statements:

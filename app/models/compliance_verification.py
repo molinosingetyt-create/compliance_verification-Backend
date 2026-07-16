@@ -17,11 +17,13 @@ class ComplianceVerification(Base):
     analyzed = Column(String(150))
     machine_id = Column(Integer, ForeignKey("packaging_machines.id"), nullable=True)
     lot_expires = Column(String(150))
+    sampled_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     status = Column(Integer, default=1)
     created_at = Column(DateTime, default=now_bogota)
     updated_at = Column(
         DateTime, default=now_bogota, onupdate=now_bogota
     )
+    deleted_at = Column(DateTime, nullable=True, index=True)
 
     product = relationship("Product", backref="compliance_verifications")
     brand = relationship("Brand", backref="compliance_verifications")
