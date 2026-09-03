@@ -647,7 +647,6 @@ class ComplianceVerificationController:
             metrics = ComplianceVerificationController._recompute_verification_status(
                 verification, nominal_value, tolerance
             )
-            db.add(verification)
             db.commit()
 
             verdict = "CUMPLE" if metrics["verification_status"] == 1 else "NO CUMPLE"
